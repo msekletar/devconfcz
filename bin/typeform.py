@@ -243,12 +243,50 @@ def _diff_submissions(path, wks_name, proposals):
         return start_cell, col_names, proposals
 
 
+def _get_type(_type):
+    try:
+        return _type.split(' ')[0]
+    except ValueError:
+        # we have some custom type, ie "meetup"... assume  40 minute
+        return 'UNKNOWN'
+
+
 def _get_duration(_type):
     try:
         return int(_type.split(' ')[-1].split('+')[0].rstrip('m'))
     except ValueError:
         # we have some custom type, ie "meetup"... assume  40 minute
-        return 40
+        return 'UNKNOWN'
+
+
+def _get_gspread(path, wks_name):
+    # access credentials
+    credentials = d2g.get_credentials()
+    # auth for gspread
+    gc = d2g.gspread.authorize(credentials)
+
+    try:
+        # if gfile is file_id
+        gc.open_by_key(path)
+        gfile_id = path
+    except Exception:
+        # else look for file_id in drive
+        gfile_id = get_file_id(credentials, path, write_access=False)
+
+    wks = d2g.get_worksheet(gc, gfile_id, wks_name, write_access=False)
+    rows = wks.get_all_values()
+
+    columns = rows.pop(0)  # header
+    columns = [x.strip() for x in columns]
+    #columns = [QUESTION_ALIAS[x.strip()] for x in columns]
+    df = pd.DataFrame(rows, columns=columns)
+    #df = df[df['timestamp'] != '']  # filter out empty rows
+
+    #proposals = pd.DataFrame(proposals).fillna("UNKNOWN")
+    # reorder the colomns
+    #df = df[SESSION_FIELDS + SPEAKER_FIELDS]
+
+    return df
 
 
 ## CLI Set-up ##
@@ -265,12 +303,15 @@ def cli(ctx, since):
         since = _convert_datetime(since)
         params['since'] = since
 
-    proposals = _get_data(url, params)
-    sessions, speakers = _split_resources(proposals)
+    # MOVE TO _get_data... and call get_data in 
+    # the cli funs that need it
+    # FIXME: This should run only when needed
+    #proposals = _get_data(url, params)
+    #sessions, speakers = _split_resources(proposals)
 
-    ctx.obj['proposals'] = proposals
-    ctx.obj['sessions'] = sessions
-    ctx.obj['speakers'] = speakers
+    #ctx.obj['proposals'] = proposals
+    #ctx.obj['sessions'] = sessions
+    #ctx.obj['speakers'] = speakers
 
 
 @cli.command()
@@ -384,6 +425,146 @@ def search(obj, column, query):
     result = proposals[proposals[column].str.contains(query, na=False)]
 
     print(result[['name', 'title']])
+
+
+@cli.command()
+@click.pass_obj
+def autoselect(obj):
+    """
+        # objective of this cli call is to automatically produce      
+        # a strawman schedule based on the input data available.
+
+        # input is the combined 'average' list of all the talks 
+        # proposed to be included by the members of the program 
+        # panel
+
+        # session(id, start, end, type, title, 
+        #         difficulty, theme, abstract, speakers,
+        #         room_id, yt_stream_url)
+
+        # yt_stream is 'youtube.com streaming url' where on-line
+        # viewers can watch the room's feed live.
+
+        # speakers is an assumed ordered list of speakers. First 
+        # speaker is considered 'primary', second is secondary...
+
+        # speaker(id, name, country, bio, org, size, email, avatar, 
+        #         twitter]
+
+        # room(id, name, capacity, type, has_display, has_eth,
+        #      has_mic)
+
+        # has_display includes 'tv' or 'projecter and screen'
+
+        # schedule(sessions, track)
+
+        # eg, all these rooms will be 'blocked' for keynotes
+        # FIXME
+        MAIN_ROOMS = ['d206', 'd205', '...']
+
+        eg_room = {
+            'id': 'g202',
+            'name': 'G202',
+            'capacity': 50,
+            'size_m2' 80,
+            'type': 'seminar',
+            'has_display': True, 
+            'has_eth': True,
+            'has_mic': False,
+            'yt_stream': 'https://youtube.com/asdfasdfasdf',
+        }
+
+        eg_speaker = {
+            'id': 'cward',  # id is alias/username
+            'name': 'Chris Ward',
+            'country': 'CZ',
+            'bio': '...',
+            'org': 'Red Hat',
+            'size': 'Medium / Male',
+            'email': 'cward@redhat.com',
+            'avatar': 'https://...url...',
+            'twitter': '@kejbaly2',
+        }
+         
+        eg_session = {
+            'id': 'containers_101',
+            'start': "2017-01-27T09:30:00",
+            'end': "2017-01-27T09:50:00",
+            'title': "Check-in",
+            'type': 'Talk 15m+5m', 
+            'difficulty': 'Advanced',
+            'themes': ['containers', 'Fedora'],
+            'abstract': '...', 
+            'speakers': ['cward'], 
+            'slides': 'https://url to slides',
+            'score': None,
+        {
+
+        eg_schedule = {
+            'sessions': ['containers_101'],
+            'track': 'containers',
+            'rooms': ['d202'],
+            #'rooms': MAIN_ROOMS,
+            #'rooms': None,
+            'start': '2017-01-27T09:00:15',
+            'end': '2017-01-27T09:00:15',
+        }
+
+        # 3 days; January 27 to 29
+        # Each day a set of time based sessions from conf start
+        # to conf end, spread across multiple tracks
+
+        # To build the strawman schedule: 
+        # 1) aggregate all the proposed sessions to be incuded
+        # 2) group, count, sort most popular first
+        # While time exists in the schedule still
+        #  add another 
+    """
+    # all submissions (RAW)
+    wks = {
+        'submissions': '1hpmxiUJ3DwkbEUdOfEFo2CmIZVWU2w6oYz4B5MEJZDU',
+        'speakers': '1hpmxiUJ3DwkbEUdOfEFo2CmIZVWU2w6oYz4B5MEJZDU',
+        'tracks': '1hpmxiUJ3DwkbEUdOfEFo2CmIZVWU2w6oYz4B5MEJZDU',
+        'sessions': '1hpmxiUJ3DwkbEUdOfEFo2CmIZVWU2w6oYz4B5MEJZDU',
+    }
+
+    SESSION_FIELDS = ['id', 'title', 'type', 'theme', 'difficulty', 'abstract']
+
+    SPEAKER_FIELDS = ['name', 'country', 'bio', 'org', 'size',
+                      'email', 'avatar', 'twitter']
+
+    submissions = _get_gspread(wks['submissions'], 'submissions')
+    submissions = submissions.drop_duplicates(['id']) 
+
+    # get duration
+    submissions['duration'] = submissions['type'].apply(_get_duration)
+    submissions['_type'] = submissions['type'].apply(_get_type)
+
+    accepted = submissions[submissions.accepted == 'yes']
+
+    speakers = _get_gspread(wks['speakers'], 'speakers')
+    speakers = speakers.drop_duplicates(['email']) 
+
+    def _get_speaker(_id):
+        # get the session with the given id
+        # look up all the speakers
+        # return dict of speaker info
+        _speakers = submissions[submissions.id == _id].speakers
+        _speakers = _speakers.apply(lambda x: [x.strip() for x in x.split(';')]).tolist()[0]
+
+        r = speakers[speakers.email == _speakers[0]]
+        r = r['name'].values[0]
+        return r
+        
+
+    sched = '1xi3QpEhIx3R600ZvKpbEPJ5D-z5o9j5fMHMFpFb_hPw'
+    day1 = _get_gspread(sched, 'Day 1')
+    day2 = _get_gspread(sched, 'Day 2')
+    day3 = _get_gspread(sched, 'Day 3')
+    
+
+    import ipdb; ipdb.set_trace()
+
 
 
 if __name__ == '__main__':
