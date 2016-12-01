@@ -303,7 +303,7 @@ def cli(ctx, since):
         since = _convert_datetime(since)
         params['since'] = since
 
-    # MOVE TO _get_data... and call get_data in 
+    # MOVE TO _get_data... and call get_data in
     # the cli funs that need it
     # FIXME: This should run only when needed
     #proposals = _get_data(url, params)
@@ -429,26 +429,155 @@ def search(obj, column, query):
 
 @cli.command()
 @click.pass_obj
+def schedule(obj):
+    db_url = '1hpmxiUJ3DwkbEUdOfEFo2CmIZVWU2w6oYz4B5MEJZDU'
+    speakers_wks = 'speakers'
+    submissions_wks = 'submissions'
+    sched_url = '1xi3QpEhIx3R600ZvKpbEPJ5D-z5o9j5fMHMFpFb_hPw'
+    sched_wks = 'All Sessions'
+
+    print('Getting Speakers DB...')
+    #speakers_db = _get_gspread(db_url, speakers_wks).drop_duplicates()
+    speakers_db = pd.read_csv('/home/cward/Downloads/DevConf.cz Panel Selection COMBINED MASTER sheet - speakers.csv')
+    print('Getting Submissions DB...')
+    #submissions_db = _get_gspread(db_url, submissions_wks).drop_duplicates()
+    #submissions_db = pd.read_csv('/home/cward/Downloads/DevConf.cz Panel Selection COMBINED MASTER sheet - submissions.csv')
+    submissions_db = pd.read_csv('/home/cward/Downloads/Devconf.cz CfP Submissions - CLEAN Talks MASTER.csv')
+    print('Getting Submissions...')
+    #sched = _get_gspread(sched_url, sched_wks)
+    sched = pd.read_csv('/home/cward/Downloads/DevConf.cz 2017 - Program Draft - All Sessions.csv')
+
+    print('Processing data...')
+
+    sched['speakers'] = sched.speakers.map(
+        lambda x: [y.strip() for y in x.split(';')])
+
+    # print out the speaker session counts
+    speakers_k = Counter()
+    for _ in sched.speakers.to_dict().values():
+        for spkr in _:
+            speakers_k.update({spkr: 1})
+
+    print()
+
+    print('Speakers with > 1 talk')
+    for spkr, k in speakers_k.items():
+        if k > 1:
+            print(' {}: {}'.format(spkr, k))
+
+    # ACCEPTED SPEAKERS
+    speakers = sorted(speakers_k.keys())
+
+    print()
+
+    print('Speaker Countries')
+    # print out the speaker country counts
+    countries_k = Counter()
+    for spkr in speakers:
+        person = speakers_db[speakers_db.email == spkr]
+        country = person.country
+        if not country.any():
+            countries_k.update({'unknown': 1})
+        else:
+            countries_k.update({country.values[0]: 1})
+    for x, y in sorted(countries_k.items()):
+        print('{: <3} x {}'.format(y, x))
+
+    print()
+
+    print('Speaker Orgs')
+    # print out the speaker country counts
+    orgs_k = Counter()
+    for spkr in speakers:
+        person = speakers_db[speakers_db.email == spkr]
+        org = person.org
+        if not org.any():
+            orgs_k.update({'unknown': 1})
+        else:
+            orgs_k.update({org.values[0]: 1})
+    for x, y in sorted(orgs_k.items()):
+        print('{: <3} x {}'.format(y, x))
+
+    print()
+
+    # duplicate talks?
+    accepted = sorted(sched.session_id.values)
+    accepted_k = Counter()
+    for x in accepted:
+        accepted_k.update({x: 1})
+    print('ACCEPTED ids:')
+    for x, y in sorted(accepted_k.items()):
+        print('{: <3} x {}'.format(y, x))
+
+    print()
+
+    print("ACCEPTED SPEAKERS SUMMARY")
+    # accepted speaker summary
+    speakers_list = []
+    for _ in speakers:
+        if _ == 'shadowman':
+            continue
+        spkr = speakers_db[speakers_db.email == _]
+        name = spkr.name.values[0]
+        country = spkr.country.values[0]
+        org = spkr.org.values[0]
+        speakers_list.append({'name': name, 'country': country, 'org': org})
+
+    for i in sorted(speakers_list, key=lambda x: (x['org'], x['name'])):
+        print('{: <25} @ {: <15}: {}'.format(i['name'], i['org'], i['country']))
+
+    print()
+
+    print('Total sessions: {}'.format(len(accepted)))
+    print('Total speakers: {}'.format(len(speakers)))
+
+    def rejected():
+        # rejected talks
+        all_submissions = set([int(x) for x in submissions_db.id.values])
+        rejected = []
+        for i in all_submissions:
+            if i not in accepted:
+                rejected.append(i)
+        print('REJECTED: {}'.format(rejected))
+        rejecteds = []
+        for _id in rejected:
+            item = submissions_db[submissions_db.id == int(_id)]
+            title = item.title.values[0]
+            speaker = item.name.values[0][0:22] + '...'
+            org = item.org.values[0][:12] + '...'
+            _type = item.type.values[0][:12] + '...'
+            rejecteds.append({'id': _id, 'speaker': speaker,
+                            'org': org, 'type': _type})
+            print('[{: <3}] {: <25} @ {: <15}: ({: <15}) {}'.format(
+                _id, speaker, org, _type, title))
+    #rejected()
+
+
+    #import ipdb; ipdb.set_trace()
+
+
+@cli.command()
+@click.pass_obj
 def autoselect(obj):
     """
-        # objective of this cli call is to automatically produce      
+        # objective of this cli call is to automatically produce
         # a strawman schedule based on the input data available.
 
-        # input is the combined 'average' list of all the talks 
-        # proposed to be included by the members of the program 
+        # input is the combined 'average' list of all the talks
+        # proposed to be included by the members of the program
         # panel
 
-        # session(id, start, end, type, title, 
+        # session(id, start, end, type, title,
         #         difficulty, theme, abstract, speakers,
         #         room_id, yt_stream_url)
 
         # yt_stream is 'youtube.com streaming url' where on-line
         # viewers can watch the room's feed live.
 
-        # speakers is an assumed ordered list of speakers. First 
+        # speakers is an assumed ordered list of speakers. First
         # speaker is considered 'primary', second is secondary...
 
-        # speaker(id, name, country, bio, org, size, email, avatar, 
+        # speaker(id, name, country, bio, org, size, email, avatar,
         #         twitter]
 
         # room(id, name, capacity, type, has_display, has_eth,
@@ -468,7 +597,7 @@ def autoselect(obj):
             'capacity': 50,
             'size_m2' 80,
             'type': 'seminar',
-            'has_display': True, 
+            'has_display': True,
             'has_eth': True,
             'has_mic': False,
             'yt_stream': 'https://youtube.com/asdfasdfasdf',
@@ -485,17 +614,17 @@ def autoselect(obj):
             'avatar': 'https://...url...',
             'twitter': '@kejbaly2',
         }
-         
+
         eg_session = {
             'id': 'containers_101',
             'start': "2017-01-27T09:30:00",
             'end': "2017-01-27T09:50:00",
             'title': "Check-in",
-            'type': 'Talk 15m+5m', 
+            'type': 'Talk 15m+5m',
             'difficulty': 'Advanced',
             'themes': ['containers', 'Fedora'],
-            'abstract': '...', 
-            'speakers': ['cward'], 
+            'abstract': '...',
+            'speakers': ['cward'],
             'slides': 'https://url to slides',
             'score': None,
         {
@@ -514,11 +643,11 @@ def autoselect(obj):
         # Each day a set of time based sessions from conf start
         # to conf end, spread across multiple tracks
 
-        # To build the strawman schedule: 
+        # To build the strawman schedule:
         # 1) aggregate all the proposed sessions to be incuded
         # 2) group, count, sort most popular first
         # While time exists in the schedule still
-        #  add another 
+        #  add another
     """
     # all submissions (RAW)
     wks = {
@@ -534,7 +663,7 @@ def autoselect(obj):
                       'email', 'avatar', 'twitter']
 
     submissions = _get_gspread(wks['submissions'], 'submissions')
-    submissions = submissions.drop_duplicates(['id']) 
+    submissions = submissions.drop_duplicates(['id'])
 
     # get duration
     submissions['duration'] = submissions['type'].apply(_get_duration)
@@ -543,7 +672,7 @@ def autoselect(obj):
     accepted = submissions[submissions.accepted == 'yes']
 
     speakers = _get_gspread(wks['speakers'], 'speakers')
-    speakers = speakers.drop_duplicates(['email']) 
+    speakers = speakers.drop_duplicates(['email'])
 
     def _get_speaker(_id):
         # get the session with the given id
@@ -555,13 +684,13 @@ def autoselect(obj):
         r = speakers[speakers.email == _speakers[0]]
         r = r['name'].values[0]
         return r
-        
+
 
     sched = '1xi3QpEhIx3R600ZvKpbEPJ5D-z5o9j5fMHMFpFb_hPw'
     day1 = _get_gspread(sched, 'Day 1')
     day2 = _get_gspread(sched, 'Day 2')
     day3 = _get_gspread(sched, 'Day 3')
-    
+
 
     import ipdb; ipdb.set_trace()
 
