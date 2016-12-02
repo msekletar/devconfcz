@@ -429,6 +429,157 @@ def search(obj, column, query):
 
 @cli.command()
 @click.pass_obj
+def email(obj):
+    get_accepted()
+
+
+def get_accepted():
+    speakers_db = pd.read_csv(
+        '/home/cward/Downloads/DevConf.cz - MASTER db - speakers.csv')
+    submissions_db = pd.read_csv(
+        '/home/cward/Downloads/DevConf.cz - MASTER db - submissions.csv')
+    sched = pd.read_csv('/home/cward/Downloads/DevConf.cz 2017 - Program Draft - All Sessions.csv')
+
+    split_speakers = lambda x: [y.strip() for y in x.split(';')]
+    # make the list of speakers a list of speakers
+    sched['speakers'] = sched.speakers.map(split_speakers)
+
+    # Get a dict of all accepted speaker ids reverse linked to session ids
+    speaker_sessions = defaultdict(list)
+    for row in sched.iterrows():
+        row = row[1].to_dict()
+        speakers = row['speakers']
+        # gather all the speaker details for the given speakers in each session
+
+        speaker_details = []
+        # first, gather all the speaker details for all speakers in the session
+        for spkr in speakers:
+            spkr = speakers_db[speakers_db.email == spkr].T.to_dict()
+            import ipdb; ipdb.set_trace()
+            if spkr:
+                spkr = spkr.popitem()[1]
+            speaker_details.append(spkr)
+
+        # then, combine those speaker details with the session details
+        for spkr in speakers:
+            speaker_sessions[spkr].append((row, speaker_details))
+
+        _sess_template = '''
+Title: {}
+Type:  {}
+Duration (inc. Q&A): {} minutes
+Speakers:
+'''
+
+        _spkr_template = '''
+ {}
+    Email: {}
+    Country: {}
+    Org: {}
+    Shirt Size: {}
+    Twitter: {}
+    Avatar: {}
+    Bio:
+        {}
+
+'''
+
+    for speaker, data in speaker_sessions.items():
+        if speaker == 'shadowman': continue
+        for _sess, _spkrs in data:
+            title = _sess['title']
+            _type = _sess['type']
+            _start = _sess['session_duration'].split(':')[1]
+            _qa = _sess['session_qa'].split(':')[1]
+            duration = int(_start) + int(_qa)
+            _sess_str = _sess_template.format(title, _type, duration)
+            _sess_spkrs_str = ''
+            for _s in _spkrs:
+                name = _s['name']
+                email = _s['email']
+                country = _s['country']
+                org = _s['org']
+                size = _s['size']
+                twitter = _s['twitter'] if _s['twitter'] else ''
+                avatar = _s['avatar']
+                bio = _s['bio']
+                _spkr = _spkr_template.format(name, email, country, org, size,
+                                              twitter, avatar, bio)
+                _sess_spkrs_str += _spkr
+        all_sessions = _sess_str + _sess_spkrs_str
+        email = email_accept.format(speaker, all_sessions)
+        print(email)
+
+
+email_accept = '''
+TO: {}
+
+Nice work! Your submission(s) were accepted to DevConf.cz 2017! This email
+contains important information about how to proceed from here. Read carefully!
+
+Please confirm that you have received this mail and you expect to speak
+at DevConf.cz. Or if you believe there has been a mistake or you for whatever
+reason can no longer participate in the event, let me know that as well ASAP!
+
+
+Sessions
+--------
+{}
+
+
+Session Errata
+--------------
+All the information related to your submission and related speakers is included
+above. It is possible that your talk duration has been modified. If you believe
+this is a mistake or if there are any other changes you would like to make to
+your submission reply to this email with the changes before December 31st!
+
+
+Speaker Hotel Reservations
+--------------------------
+Traveling speakers can stay for free at Hotel Avanti for up to 3 nights:
+ * Thursday Jan 26
+ * Friday Jan 27
+ * Saturday Jan 28
+
+Hotel Avanti is near the venue and the main tram lines, beautiful rooms with
+wifi, free breakfast and parking and has an recently been upgraded to include
+free access to their new wellness center!
+
+** Sharing a double room with another speaker is strongly recommended! **
+
+To secure your reservation, send an email ASAP with the following information
+TO: hotel@hotelavanti.cz
+CC: cward@redhat.com
+SUBJECT: DevConf.cz Speaker Reservation - $your_name
+
+ * Whether you are requesting a single / double *classic* room
+ * names of people
+ * check-in / check-out dates
+   - DevConf.cz will be cover *ONLY*
+     + 3 nights of Jan 26-28
+     + Accepted DevConf.cz speakers
+   - you are responsible for payment of  additional fees for
+      - *all* additional nights
+      - non-speakers
+
+**********************************************************************
+  If you choose to reserve your hotel somewhere other than Avanti,
+       DevConf.cz will NOT be responsible for these expenses!
+**********************************************************************
+
+
+
+If you have any other requests, questions or concerns just let me know.
+
+-Chris
+
+
+'''
+
+
+@cli.command()
+@click.pass_obj
 def schedule(obj):
     db_url = '1hpmxiUJ3DwkbEUdOfEFo2CmIZVWU2w6oYz4B5MEJZDU'
     speakers_wks = 'speakers'
@@ -437,18 +588,24 @@ def schedule(obj):
     sched_wks = 'All Sessions'
 
     print('Getting Speakers DB...')
-    #speakers_db = _get_gspread(db_url, speakers_wks).drop_duplicates()
-    speakers_db = pd.read_csv('/home/cward/Downloads/DevConf.cz Panel Selection COMBINED MASTER sheet - speakers.csv')
+    speakers_db = pd.read_csv(
+        '/home/cward/Downloads/DevConf.cz - MASTER db - speakers.csv')
+
     print('Getting Submissions DB...')
-    #submissions_db = _get_gspread(db_url, submissions_wks).drop_duplicates()
-    #submissions_db = pd.read_csv('/home/cward/Downloads/DevConf.cz Panel Selection COMBINED MASTER sheet - submissions.csv')
-    submissions_db = pd.read_csv('/home/cward/Downloads/Devconf.cz CfP Submissions - CLEAN Talks MASTER.csv')
+    submissions_db = pd.read_csv(
+        '/home/cward/Downloads/DevConf.cz - MASTER db - submissions.csv')
+
     print('Getting Submissions...')
-    #sched = _get_gspread(sched_url, sched_wks)
-    sched = pd.read_csv('/home/cward/Downloads/DevConf.cz 2017 - Program Draft - All Sessions.csv')
+    sched = pd.read_csv(
+        '/home/cward/Downloads/DevConf.cz 2017 - Program Draft - All Sessions.csv')
+
+    print('Getting all original submissions')
+    source_db = pd.read_csv(
+        '/home/cward/Downloads/Devconf.cz CfP Submissions - SOURCE - CLEAN Talks MASTER.csv')
 
     print('Processing data...')
 
+    # get a full list of all accepted speakers
     sched['speakers'] = sched.speakers.map(
         lambda x: [y.strip() for y in x.split(';')])
 
@@ -458,15 +615,15 @@ def schedule(obj):
         for spkr in _:
             speakers_k.update({spkr: 1})
 
+    # pull out a list of the unique speakers
+    speakers = sorted(speakers_k.keys())
+
     print()
 
     print('Speakers with > 1 talk')
     for spkr, k in speakers_k.items():
         if k > 1:
             print(' {}: {}'.format(spkr, k))
-
-    # ACCEPTED SPEAKERS
-    speakers = sorted(speakers_k.keys())
 
     print()
 
@@ -524,7 +681,8 @@ def schedule(obj):
         speakers_list.append({'name': name, 'country': country, 'org': org})
 
     for i in sorted(speakers_list, key=lambda x: (x['org'], x['name'])):
-        print('{: <25} @ {: <15}: {}'.format(i['name'], i['org'], i['country']))
+        print('{: <25} @ {: <15}: {}'.format(
+            i['name'], i['org'], i['country']))
 
     print()
 
@@ -547,153 +705,13 @@ def schedule(obj):
             org = item.org.values[0][:12] + '...'
             _type = item.type.values[0][:12] + '...'
             rejecteds.append({'id': _id, 'speaker': speaker,
-                            'org': org, 'type': _type})
+                             'org': org, 'type': _type})
             print('[{: <3}] {: <25} @ {: <15}: ({: <15}) {}'.format(
                 _id, speaker, org, _type, title))
     #rejected()
 
 
     #import ipdb; ipdb.set_trace()
-
-
-@cli.command()
-@click.pass_obj
-def autoselect(obj):
-    """
-        # objective of this cli call is to automatically produce
-        # a strawman schedule based on the input data available.
-
-        # input is the combined 'average' list of all the talks
-        # proposed to be included by the members of the program
-        # panel
-
-        # session(id, start, end, type, title,
-        #         difficulty, theme, abstract, speakers,
-        #         room_id, yt_stream_url)
-
-        # yt_stream is 'youtube.com streaming url' where on-line
-        # viewers can watch the room's feed live.
-
-        # speakers is an assumed ordered list of speakers. First
-        # speaker is considered 'primary', second is secondary...
-
-        # speaker(id, name, country, bio, org, size, email, avatar,
-        #         twitter]
-
-        # room(id, name, capacity, type, has_display, has_eth,
-        #      has_mic)
-
-        # has_display includes 'tv' or 'projecter and screen'
-
-        # schedule(sessions, track)
-
-        # eg, all these rooms will be 'blocked' for keynotes
-        # FIXME
-        MAIN_ROOMS = ['d206', 'd205', '...']
-
-        eg_room = {
-            'id': 'g202',
-            'name': 'G202',
-            'capacity': 50,
-            'size_m2' 80,
-            'type': 'seminar',
-            'has_display': True,
-            'has_eth': True,
-            'has_mic': False,
-            'yt_stream': 'https://youtube.com/asdfasdfasdf',
-        }
-
-        eg_speaker = {
-            'id': 'cward',  # id is alias/username
-            'name': 'Chris Ward',
-            'country': 'CZ',
-            'bio': '...',
-            'org': 'Red Hat',
-            'size': 'Medium / Male',
-            'email': 'cward@redhat.com',
-            'avatar': 'https://...url...',
-            'twitter': '@kejbaly2',
-        }
-
-        eg_session = {
-            'id': 'containers_101',
-            'start': "2017-01-27T09:30:00",
-            'end': "2017-01-27T09:50:00",
-            'title': "Check-in",
-            'type': 'Talk 15m+5m',
-            'difficulty': 'Advanced',
-            'themes': ['containers', 'Fedora'],
-            'abstract': '...',
-            'speakers': ['cward'],
-            'slides': 'https://url to slides',
-            'score': None,
-        {
-
-        eg_schedule = {
-            'sessions': ['containers_101'],
-            'track': 'containers',
-            'rooms': ['d202'],
-            #'rooms': MAIN_ROOMS,
-            #'rooms': None,
-            'start': '2017-01-27T09:00:15',
-            'end': '2017-01-27T09:00:15',
-        }
-
-        # 3 days; January 27 to 29
-        # Each day a set of time based sessions from conf start
-        # to conf end, spread across multiple tracks
-
-        # To build the strawman schedule:
-        # 1) aggregate all the proposed sessions to be incuded
-        # 2) group, count, sort most popular first
-        # While time exists in the schedule still
-        #  add another
-    """
-    # all submissions (RAW)
-    wks = {
-        'submissions': '1hpmxiUJ3DwkbEUdOfEFo2CmIZVWU2w6oYz4B5MEJZDU',
-        'speakers': '1hpmxiUJ3DwkbEUdOfEFo2CmIZVWU2w6oYz4B5MEJZDU',
-        'tracks': '1hpmxiUJ3DwkbEUdOfEFo2CmIZVWU2w6oYz4B5MEJZDU',
-        'sessions': '1hpmxiUJ3DwkbEUdOfEFo2CmIZVWU2w6oYz4B5MEJZDU',
-    }
-
-    SESSION_FIELDS = ['id', 'title', 'type', 'theme', 'difficulty', 'abstract']
-
-    SPEAKER_FIELDS = ['name', 'country', 'bio', 'org', 'size',
-                      'email', 'avatar', 'twitter']
-
-    submissions = _get_gspread(wks['submissions'], 'submissions')
-    submissions = submissions.drop_duplicates(['id'])
-
-    # get duration
-    submissions['duration'] = submissions['type'].apply(_get_duration)
-    submissions['_type'] = submissions['type'].apply(_get_type)
-
-    accepted = submissions[submissions.accepted == 'yes']
-
-    speakers = _get_gspread(wks['speakers'], 'speakers')
-    speakers = speakers.drop_duplicates(['email'])
-
-    def _get_speaker(_id):
-        # get the session with the given id
-        # look up all the speakers
-        # return dict of speaker info
-        _speakers = submissions[submissions.id == _id].speakers
-        _speakers = _speakers.apply(lambda x: [x.strip() for x in x.split(';')]).tolist()[0]
-
-        r = speakers[speakers.email == _speakers[0]]
-        r = r['name'].values[0]
-        return r
-
-
-    sched = '1xi3QpEhIx3R600ZvKpbEPJ5D-z5o9j5fMHMFpFb_hPw'
-    day1 = _get_gspread(sched, 'Day 1')
-    day2 = _get_gspread(sched, 'Day 2')
-    day3 = _get_gspread(sched, 'Day 3')
-
-
-    import ipdb; ipdb.set_trace()
-
 
 
 if __name__ == '__main__':
