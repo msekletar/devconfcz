@@ -103,7 +103,31 @@
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
 
           <a class="top-branding hidden-md hidden-sm hidden-xs" href="#" onclick="scroll_to_section('#intro')">
-            <img src="img/devconf-cz-webopt.svg" class="navbar-brand" alt="Back to top"></a>
+            <img src="img/devconf-cz-webopt.svg" class="navbar-brand" alt="Back to top">
+          </a>
+
+          <ul class="nav navbar-nav navbar-left">
+            <li><a href="index.html" class="fa fa-home" title="DevConf.cz - Home">
+                <span class="hide">Home</span>
+            </a></li>
+
+            <!-- this is ugly... should just fit in... no extra styles in-inline... -->
+            <li>
+            <div class="dropdown" style="margin-top: 12px; color: #777777">
+              <i class="fa fa-history" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                <span class="caret"></span>
+              </i>
+              <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                <li class="dropdown-header">Main Events</li>
+                <li><a href="2018/index.html"><b>2018 - COMING SOON</b></a></li>
+                <li><a href="2017/index.html#" style="color: #666">2017 - January 27-29</a></li>
+                <li class="dropdown-header">Roadshow Events</li>
+                <li><a href="containers/index.html"><b>Containers 2017 - Prague</b></a></li>
+              </ul>
+            </div>
+            </li>
+
+          </ul>
 
           <ul class="nav navbar-nav navbar-right social">
             <li><a href="https://telegram.me/joinchat/B1He_UEkuB4fBfY1cKCXRw" class="fa fa-send-o" title="Telegram - Attendees Channel">
@@ -129,11 +153,14 @@
 
             <li><a href="https://github.com/kejbaly2/devconfcz" class="fa fa-github" title="Github">
                 <span class="hide">GitHub</span>
+            </a></li>
 
             <li><a href="mailto:info@devconf.cz" class="fa fa-envelope" title="E-Mail">
                 <span class="hide">E-mail</span>
             </a></li>
           </ul>
+
+
         </div>
 
         <!-- /.navbar-collapse -->
@@ -142,34 +169,88 @@
       <!-- /.container -->
     </nav>
 
+
+
+
     <!-- Home Section -->
     <header id="intro" class="intro-section">
       <div class="container">
         <div class="row">
           <div class="col-sm-12 intro-content">
+
+            <a href="#">
+              <h1 class="logo"><img id="devconf-logo" src="img/devconf-cz-webopt.svg" alt="DevConf.cz"></h1>
+            </a>
+            <h2>#DEFINEfuture</h2>
+          </div>
+        </div>
+
+        <div class="row" style="padding-top: .5em">
+          <!-- MAKE EACH OF THESE BOXES CONSTANT HEIGHT -->
+          <div class="col-sm-6 intro-content">
+            <div> 
+            <a href="containers/index.html">
+                <img src="img/devconf-cz-prgcont-cz-basic.png" style="width: 45%;" /> 
+            </a>
+            </div>
+
+              <h1 class="title">Containers Roadshow</h1>
+
             <div class="time-and-place">
               <address>Prague, Czech Republic</address>
               <div class="date">
-                <time datetime="2017-01-27">Wednesday April 19, 2017 </time>
+                <time datetime="COMING SOON"><b>April 19th, 2017</b></time>
               </div>
-              <address>Ústřední knihovna ČVUT (Technická 6)</address>
             </div>
-
-            <h1 class="logo"><img id="devconf-logo" src="img/devconf-cz-webopt.svg" alt="DevConf.cz"></h1>
-
-            <div class="tagline">Containers Roadshow</div>
 
             <div class="intro-text">
-               In collaboration with the <a href="https://www.meetup.com/Prague-Containers-Meetup/">Prague Containers community</a>, DevConf.cz is hitting the road with a special one day, free community conference for developers, admins, and users of Open Source Container technologies.
-               </br></br>
-               <b>More details coming soon!</b>
+               In collaboration with the <a href="http://prgcont.cz/">Prague Containers community</a>, we bring you the first annual, free, one day containers focused community conference in Prague.
+            </div>
+
+            <div class="intro-text">
+               <a href="containers/index.html">More details...</a>
+            </div>
+
+            <div class = "alert alert-success">
+              <b><a href='http://bit.ly/devconfcz-17-roadshow-containers-registration'>Register NOW >></a></b>
+            </div>
+
+          </div>
+
+          <div class="col-sm-6 intro-content">
+            <div> 
+            <a href="2018/index.html">
+                <img src="img/devconf-cz-prgcont-cz-petrov-words.png" style="width: 45%;" /> 
+            </a>
+            </div>
+
+            <h1 class="title">Main Event</h1>
+
+            <div class="time-and-place">
+              <address>Brno, Czech Republic</address>
+              <div class="date">
+                <time datetime=""><b>Winter 2018 - COMING SOON</b></time>
+              </div>
+            </div>
+
+            <div class="intro-text">
+               The 10th annual, free community conference in Brno for developers, admins, and users of free and open source Linux, JBoss and other technologies.
+            </div>
+
+            <div class="intro-text">
+               <a href="2018/index.html">More details...</a>
+            </div>
+
+            <div class = "alert alert-warning">
+              <b>Registration COMING SOON!</b>
             </div>
           </div>
 
-           <!-- this should just sit some 2em or something about the bottom of the screen -->
-           <div class="col-sm-12" style="padding-top: 4em;">
-            <a href="#contact" style="color: #8786df;"><i class="fa fa-chevron-circle-down" aria-hidden="true"></i></a>
-          </div>
+         <!-- this should just sit some 2em or something about the bottom of the screen -->
+         <div class="col-sm-12">
+           <a href="#contact" style="color: #8786df;"><i class="fa fa-chevron-circle-down next-page" aria-hidden="true"></i></a>
+         </div>
+
         </div>
     </header>
 
@@ -214,40 +295,16 @@
       </div>
     </section>
 
+
     <!-- Sponsors -->
     <section id="sponsors" class="sponsors-section">
       <h2>Sponsors</h2>
       <div class="container">
-        <h3>This event is sponsored by</h3>
+        <h3>DevConf.cz community events are sponsored by</h3>
         <div class="row">
           <div class="col-lg-12">
             <a href="https://www.redhat.com/en/global/czech-republic"><img alt="Red Hat, Czech" src="img/logo_redhat_rgb_default.png"></a>
           </div>
-        </div>
-        <div class="row">
-          <div class="col-md-12">
-            <h4>And supported by our friends at</h4>
-          </div>
-
-          <div class="col-lg-12">
-            <a href="https://www.meetup.com/Prague-Containers-Meetup/" class="meetup">Prague Containers Meetup</a>
-          </div>
-
-          <div class="col-lg-6">
-            <a href="https://www.openshift.com">
-                <img alt="OpenShift" src="img/openshift_logo_cropped_250w.png"></a>
-          </div>
-
-          <div class="col-lg-6">
-            <a href="https://mojefedora.cz">
-                <img alt="Moje Fedora CZ" src="img/cropped-mojefedora-250x-150y.png"></a>
-          </div>
-
-          <div class="col-lg-12">
-            <a href="https://www.knihovna.cvut.cz/">
-                <img alt="Ústřední knihovna ČVUT" src="img/uk_cvut_header.png"></a>
-          </div>
-
         </div>
       </div>
     </section>
