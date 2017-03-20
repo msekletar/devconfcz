@@ -191,7 +191,7 @@ h3.first {
   /*background: #fff url("../img/petrov_brno-illustration2.png") no-repeat 80% 100%;*/
   background-size: contain;
   padding: 3em 0 3em;
-  font-size: 130%;
+  font-size: 100%;
   color: #999;
   min-height: 100%;
 }
